@@ -1,0 +1,37 @@
+name: Build Astroverb 16 (Windows)
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure (Visual Studio 2022, x64)
+        run: cmake -S . -B build -G "Visual Studio 17 2022" -A x64
+
+      - name: Build (Release)
+        run: cmake --build build --config Release --parallel
+
+      - name: Collect files
+        shell: bash
+        run: |
+          mkdir -p dist
+          cp -r "build/Astroverb_artefacts/Release/VST3/Astroverb 16.vst3" dist/
+          cp "build/Astroverb_artefacts/Release/Standalone/Astroverb 16.exe" dist/
+
+      - name: Upload VST3
+        uses: actions/upload-artifact@v4
+        with:
+          name: Astroverb16-VST3
+          path: dist/Astroverb 16.vst3
+
+      - name: Upload Standalone
+        uses: actions/upload-artifact@v4
+        with:
+          name: Astroverb16-Standalone
+          path: dist/Astroverb 16.exe
