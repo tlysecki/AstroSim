@@ -34,7 +34,7 @@ public:
 
     // ---- cab IR ----
     void loadIR(const juce::File& f);
-    juce::String getIRName() const { return irFile.existsAsFile() ? irFile.getFileName() : juce::String(); }
+    juce::String getIRName() const { return irStatus; }
 
     // ---- hosted reverb (any VST3) ----
     void loadReverbPlugin(const juce::File& vst3, std::function<void(const juce::String& error)> done = {});
@@ -76,6 +76,7 @@ private:
     // post chain
     juce::dsp::Convolution cab { juce::dsp::Convolution::NonUniform { 256 } };
     juce::File irFile;
+    juce::String irStatus;                  // message-thread only: what the editor shows
     std::atomic<bool> irLoaded{false};      // JUCE's convolution holds a 1-sample placeholder IR until a real one is loaded
     juce::dsp::IIR::Filter<float> hpf1[2], hpf2[2];
     juce::AudioBuffer<float> work;                   // mono float scratch

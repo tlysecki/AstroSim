@@ -294,10 +294,24 @@ void AstroverbAudioProcessor::closeReverbLoop(int)
 // ------------------------------------------------------------------ IR
 void AstroverbAudioProcessor::loadIR(const juce::File& f)
 {
-    if (!f.existsAsFile()) return;
+    // read the file here so a failure is reported instead of silently leaving the placeholder IR in place
+    if (!f.existsAsFile()) { irStatus = "IR file not found: " + f.getFileName(); return; }
+    juce::AudioFormatManager fm; fm.registerBasicFormats();
+    std::unique_ptr<juce::AudioFormatReader> reader(fm.createReaderFor(f));
+    if (reader == nullptr || reader->lengthInSamples < 2 || reader->numChannels < 1)
+    { irStatus = "Could not read " + f.getFileName() + " (use a PCM .wav, 16/24/32-bit)"; return; }
+
+    const int len = (int) std::min<juce::int64>(reader->lengthInSamples, (juce::int64) (reader->sampleRate * 2.0));   // 2 s is plenty for a cab
+    juce::AudioBuffer<float> buf((int) std::min<unsigned int>(reader->numChannels, 2u), len);
+    reader->read(&buf, 0, len, 0, true, buf.getNumChannels() > 1);
+    const double sr = reader->sampleRate;
+    const int chans = buf.getNumChannels();
+
     irFile = f;
+    cab.loadImpulseResponse(std::move(buf), sr, chans > 1 ? juce::dsp::Convolution::Stereo::yes : juce::dsp::Convolution::Stereo::no,
+                            juce::dsp::Convolution::Trim::yes, juce::dsp::Convolution::Normalise::yes);
+    irStatus = f.getFileName() + "  (" + juce::String(chans == 1 ? "mono" : "stereo") + ", " + juce::String(len * 1000.0 / sr, 0) + " ms, " + juce::String(sr / 1000.0, 1) + " kHz)";
     irLoaded.store(true);
-    cab.loadImpulseResponse(f, juce::dsp::Convolution::Stereo::yes, juce::dsp::Convolution::Trim::yes, 0, juce::dsp::Convolution::Normalise::yes);
 }
 
 // ------------------------------------------------------------------ hosted reverb
